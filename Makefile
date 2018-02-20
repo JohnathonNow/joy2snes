@@ -1,9 +1,14 @@
-all: read joy
+CCFLAGS=-lwiringPi -lpthread -O0 -funroll-loops
+all: main
+
+main: main.c
+	gcc $^ ${CCFLAGS} -o $@
 
 read: read.c
-	gcc $^ -lwiringPi -O3 -o $@
+	gcc $^ $(CCFLAGS} -o $@
+
 joy: joy.c
-	gcc $^ -lpthread -O3 -o $@
+	gcc $^ ${CCFLAGS} -o $@
 
 clean:
 	rm -rf *.o read joy
