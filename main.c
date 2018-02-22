@@ -3,7 +3,6 @@
 #include <sys/time.h>
 #include <linux/joystick.h>
 #include <pthread.h>
-#include <fcntl.h>
 
 #define THRESHOLD 2<<13
 #define CLK 8
@@ -14,6 +13,10 @@ int BUTTONS[32] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
 //B Y SEL START UP DOWN LEFT RIGHT A X L R
 
 void *joy(void*);
+void reset();
+void send();
+
+int c = 0;
 
 int main() {
 	wiringPiSetup() ;
@@ -22,39 +25,27 @@ int main() {
 	pinMode(LAT, INPUT);
 	pinMode(DAT, OUTPUT);
 	digitalWrite(DAT, 1);
-	int joy = open("/dev/input/js0", O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);    
+	wiringPiISR(LAT, INT_EDGE_RISING, reset);
+	wiringPiISR(CLK, INT_EDGE_FALLING, send);
+	joy(0);
+}
+
+void send() {
+	c++;
+	digitalWrite(DAT, BUTTONS[c]);
+	delayMicroseconds(3);
+}
+
+void reset() {
+	c = 0;
+	delayMicroseconds(5);
+}
+
+void *joy(void* args) {
+	FILE *joy = fopen("/dev/input/js0", "r");    
 	struct js_event e = {0};
 	for (;;) {
-		if (!digitalRead(LAT)) {
-			delayMicroseconds(6);
-			digitalWrite(DAT, BUTTONS[1]);
-			delayMicroseconds(12);
-			digitalWrite(DAT, BUTTONS[2]);
-			delayMicroseconds(12);
-			digitalWrite(DAT, BUTTONS[3]);
-			delayMicroseconds(12);
-			digitalWrite(DAT, BUTTONS[4]);
-			delayMicroseconds(12);
-			digitalWrite(DAT, BUTTONS[5]);
-			delayMicroseconds(12);
-			digitalWrite(DAT, BUTTONS[6]);
-			delayMicroseconds(12);
-			digitalWrite(DAT, BUTTONS[7]);
-			delayMicroseconds(12);
-			digitalWrite(DAT, BUTTONS[8]);
-			delayMicroseconds(12);
-			digitalWrite(DAT, BUTTONS[9]);
-			delayMicroseconds(12);
-			digitalWrite(DAT, BUTTONS[10]);
-			delayMicroseconds(12);
-			digitalWrite(DAT, BUTTONS[11]);
-			delayMicroseconds(12);
-			digitalWrite(DAT, BUTTONS[12]);
-			delayMicroseconds(12);
-			digitalWrite(DAT, BUTTONS[13]);
-			delayMicroseconds(12);
-		}
-		read(joy, &e, sizeof(e));
+		fread(&e, sizeof(e), 1, joy);
 		switch (e.type)
 		{
 			case JS_EVENT_BUTTON:
@@ -101,19 +92,5 @@ int main() {
 				break;
 			default: break;
 		}
-	}
-}
-
-void latch() {
-	delayMicroseconds(18);
-	int i;
-	for (i = 1; i <= 13; i++) {
-		digitalWrite(DAT, BUTTONS[i]);
-		delayMicroseconds(10);
-	}
-}
-
-void *joy(void* args) {
-	for (;;) {
 	}
 }
